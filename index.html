@@ -68,7 +68,7 @@
 
   .dice-result {
       text-align: center;
-      margin: 10px auto 0px auto; /* Updated margin */
+      margin: 10px auto; /* Updated margin */
       font-size: 20px;
       max-width: 800px;
   }
@@ -84,7 +84,60 @@
       margin: 0 10px;
       font-size: 24px;
       font-weight: bold;
+      position: relative; /* Needed for absolute positioning of pips */
   }
+
+  /* Pip styling */
+  .pip {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: black;
+      border-radius: 50%;
+  }
+
+  .pip.top-left     { top: 8%;  left: 8%; }
+  .pip.top-center   { top: 8%;  left: 50%; transform: translateX(-50%); }
+  .pip.top-right    { top: 8%;  right: 8%; }
+  .pip.middle-center{ top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .pip.bottom-left  { bottom: 8%; left: 8%; }
+  .pip.bottom-center{ bottom: 8%; left: 50%; transform: translateX(-50%); }
+  .pip.bottom-right { bottom: 8%; right: 8%; }
+
+  /* Dice face configurations */
+  .dice .pip { display: none; } /* Hide all pips by default */
+
+  .dice.face-1 .middle-center { display: block; }
+
+  .dice.face-2 .top-right,
+  .dice.face-2 .bottom-left { display: block; }
+
+  .dice.face-3 .top-right,
+  .dice.face-3 .middle-center,
+  .dice.face-3 .bottom-left { display: block; }
+
+  .dice.face-4 .top-left,
+  .dice.face-4 .top-right,
+  .dice.face-4 .bottom-left,
+  .dice.face-4 .bottom-right { display: block; }
+
+  .dice.face-5 .top-left,
+  .dice.face-5 .top-right,
+  .dice.face-5 .middle-center,
+  .dice.face-5 .bottom-left,
+  .dice.face-5 .bottom-right { display: block; }
+
+  .dice.face-6 .top-left,
+  .dice.face-6 .top-right,
+  .dice.face-6 .middle-left, /* Added for 6-face */
+  .dice.face-6 .middle-right, /* Added for 6-face */
+  .dice.face-6 .bottom-left,
+  .dice.face-6 .bottom-right { display: block; }
+
+  /* Additional pip positions for face-6 (if needed, based on common dice layouts) */
+  .pip.middle-left { top: 50%; left: 8%; transform: translateY(-50%); }
+  .pip.middle-right { top: 50%; right: 8%; transform: translateY(-50%); }
+
 
   .notifications {
       text-align: center;
@@ -117,21 +170,24 @@
       background-color: rgba(255, 215, 0, 0.1);
   }
 
-  .controls {
-      text-align: center;
-      margin: 10px 0;
-  }
-
   .roll-btn {
+      width: 80px; /* Make it square */
+      height: 80px; /* Make it square */
+      border-radius: 50%; /* Make it circular */
+      padding: 0; /* Remove padding as width/height define size */
+      display: flex; /* Use flexbox to center text */
+      align-items: center;
+      justify-content: center;
+      font-size: 22px; /* Slightly larger text */
+      font-weight: bold; /* Ensure text is bold */
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.7), 0 0 25px rgba(255, 215, 0, 0.5); /* Glowing effect */
+      text-shadow: 0 0 5px rgba(0,0,0,0.5); /* Subtle text shadow */
+      flex-shrink: 0; /* Prevent it from shrinking */
       color: white;
       border: none;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 100px;
       cursor: pointer;
       background-color: #dc3545;
       transition: background-color 0.3s;
-      margin: 0 10px;
   }
 
   .roll-btn:hover {
@@ -141,18 +197,25 @@
   .roll-btn:disabled {
       background-color: #6c757d;
       cursor: not-allowed;
+      box-shadow: none; /* Remove glow when disabled */
   }
 
   .clear-btn, .action-btn { /* Combined styles for clear and new action buttons */
       color: white;
-      border: none;
-      padding: 10px 20px; /* Smaller padding for these buttons */
+      border: 2px solid black; /* Black border */
+      height: 50px; /* Fixed height */
+      padding: 0 15px; /* Horizontal padding */
       font-size: 16px; /* Smaller font size */
-      border-radius: 8px;
+      border-radius: 25px; /* Make it pill-shaped (half of height) */
       cursor: pointer;
       transition: background-color 0.3s;
       background-color: #6c757d; /* Default gray */
       white-space: nowrap; /* Prevent text wrapping */
+      flex-shrink: 0; /* Prevent shrinking */
+      display: flex; /* Use flexbox to center text */
+      align-items: center;
+      justify-content: center;
+      text-align: center; /* Ensure text is centered */
   }
 
   .clear-btn:hover, .action-btn:hover {
@@ -415,13 +478,14 @@
   #chip-bar {
       display: flex;
       align-items: center; /* Vertically align items */
-      justify-content: space-between; /* Distribute items with space between */
-      gap: 15px; /* Gap between main sections */
+      justify-content: center; /* Center the whole group */
+      gap: 20px; /* Increased gap for better spacing between elements */
       margin-top: 30px;
-      padding: 10px 20px;
+      padding: 20px;
       background-color: rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      min-height: 80px; /* Make it a clear drop target */
+      min-height: 80px;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.7), 0 0 25px rgba(255, 215, 0, 0.5); /* Glowing effect */
   }
 
   .chip-container { /* New container for chips to keep them grouped and centered */
@@ -430,6 +494,7 @@
       gap: 15px;
       flex-grow: 1; /* Allow it to take up available space */
       flex-wrap: wrap; /* Allow chips to wrap if space is limited */
+      min-width: 300px; /* Ensure it doesn't collapse too much */
   }
 
   .chip {
@@ -511,17 +576,36 @@
   <h1>🎲 Easy Craps 🎲</h1>
 </div>
 
-<div class="dice-result" id="diceResult">
-  <div><span class="dice" id="dice1">1</span> <span class="dice" id="dice2">1</span></div>
-</div>
-
 <div class="notifications" id="notifications">
   <div class="notification-message" style="text-align: center; color: #ffd700;">Place your bets and roll the dice!</div>
 </div>
 
-<div class="controls">
-  <button class="roll-btn" id="rollBtn" onclick="rollDice()">ROLL</button>
+<div class="dice-result" id="diceResult">
+  <div class="dice" id="dice1">
+    <div class="pip top-left"></div>
+    <div class="pip top-center"></div>
+    <div class="pip top-right"></div>
+    <div class="pip middle-left"></div> <!-- Added for 6-face -->
+    <div class="pip middle-center"></div>
+    <div class="pip middle-right"></div> <!-- Added for 6-face -->
+    <div class="pip bottom-left"></div>
+    <div class="pip bottom-center"></div>
+    <div class="pip bottom-right"></div>
+  </div>
+  <div class="dice" id="dice2">
+    <div class="pip top-left"></div>
+    <div class="pip top-center"></div>
+    <div class="pip top-right"></div>
+    <div class="pip middle-left"></div> <!-- Added for 6-face -->
+    <div class="pip middle-center"></div>
+    <div class="pip middle-right"></div> <!-- Added for 6-face -->
+    <div class="pip bottom-left"></div>
+    <div class="pip bottom-center"></div>
+    <div class="pip bottom-right"></div>
+  </div>
 </div>
+
+<!-- Removed the empty controls div -->
 
 <div id="number-bets">
   <div class="bet-box" data-bet-target="bet-2">
@@ -651,6 +735,7 @@
     <div class="chip chip-50" draggable="true" data-value="50">$50</div>
     <div class="chip chip-100" draggable="true" data-value="100">$100</div>
   </div>
+  <button class="roll-btn" id="rollBtn" onclick="rollDice()">ROLL</button>
   <button class="action-btn" id="doubleBetBtn" onclick="doubleAllBets()">Double Bet</button>
   <button class="action-btn" id="repeatLastBetBtn" onclick="repeatLastBet()">Repeat Last Bet</button>
 </div>
@@ -826,8 +911,11 @@
           const result = await response.json();
           console.log('rollDice: Received roll result:', result);
 
-          document.getElementById('dice1').textContent = result.dice[0];
-          document.getElementById('dice2').textContent = result.dice[1];
+          // Update dice display with pip faces
+          const die1 = document.getElementById('dice1');
+          die1.className = `dice face-${result.dice[0]}`;
+          const die2 = document.getElementById('dice2');
+          die2.className = `dice face-${result.dice[1]}`;
 
           currentBalance = result.newBalance; // Update global currentBalance from backend response
 
@@ -865,7 +953,7 @@
 
   function doubleAllBets() {
       console.log('doubleAllBets: Doubling all current bets.');
-      let currentTotalBet = calculateTotalStakedChips();
+      const currentStakedChips = calculateTotalStakedChips();
       let potentialNewTotalBet = 0;
 
       // First, calculate the potential new total bet to check balance
@@ -874,10 +962,13 @@
           potentialNewTotalBet += currentBet * 2;
       });
 
-      // Check if doubling exceeds playable balance
-      if (currentBalance < potentialNewTotalBet) {
+      // Calculate the additional amount needed to double all bets
+      const additionalAmountNeeded = potentialNewTotalBet - currentStakedChips;
+
+      // Check if the additional amount needed exceeds the current playable balance
+      if (currentBalance - currentStakedChips < additionalAmountNeeded) {
           alert('Not enough balance to double all bets!');
-          console.log(`doubleAllBets: Insufficient balance. Current: $${currentBalance}, Needed: $${potentialNewTotalBet}`);
+          console.log(`doubleAllBets: Insufficient balance. Current playable: $${currentBalance - currentStakedChips}, Needed for double: $${additionalAmountNeeded}`);
           return;
       }
 
@@ -899,9 +990,9 @@
 
   function repeatLastBet() {
       console.log('repeatLastBet: Attempting to repeat last bet.');
-      if (Object.keys(lastPlacedBets).length === 0) {
+      if (Object.keys(lastPlacedBets).length === 0 || Object.values(lastPlacedBets).every(amount => amount === 0)) {
           alert('No last bet to repeat!');
-          console.log('repeatLastBet: No last placed bets found.');
+          console.log('repeatLastBet: No last placed bets found or all were zero.');
           return;
       }
 
@@ -910,10 +1001,11 @@
           totalAmountToRepeat += lastPlacedBets[betType];
       }
 
-      // Check if repeating exceeds playable balance
-      if (currentBalance < totalAmountToRepeat) {
+      // Check if repeating exceeds playable balance (currentBalance - currentStakedChips)
+      const currentStakedChips = calculateTotalStakedChips();
+      if (currentBalance - currentStakedChips < totalAmountToRepeat) {
           alert('Not enough balance to repeat last bet!');
-          console.log(`repeatLastBet: Insufficient balance. Current: $${currentBalance}, Needed: $${totalAmountToRepeat}`);
+          console.log(`repeatLastBet: Insufficient balance. Current playable: $${currentBalance - currentStakedChips}, Needed: $${totalAmountToRepeat}`);
           return;
       }
 
@@ -1149,8 +1241,8 @@
   function initializeDiceDisplay() {
       const d1 = Math.floor(Math.random() * 6) + 1;
       const d2 = Math.floor(Math.random() * 6) + 1;
-      document.getElementById('dice1').textContent = d1;
-      document.getElementById('dice2').textContent = d2;
+      document.getElementById('dice1').className = `dice face-${d1}`;
+      document.getElementById('dice2').className = `dice face-${d2}`;
       console.log(`initializeDiceDisplay: Dice initialized to ${d1}, ${d2}`);
   }
 

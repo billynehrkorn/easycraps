@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import random
 import os
+import csv
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -33,6 +35,14 @@ def roll_dice():
     d1 = random.randint(1, 6)
     d2 = random.randint(1, 6)
     dice_sum = d1 + d2
+
+    # Log the roll to rolls.csv
+    with open(os.path.join(app.root_path, 'rolls.csv'), 'a', newline='') as f:
+        writer = csv.writer(f)
+        # Write header if file is new/empty (optional, but good practice for first run)
+        if f.tell() == 0:
+            writer.writerow(['timestamp', 'die1', 'die2', 'sum'])
+        writer.writerow([datetime.now().isoformat(), d1, d2, dice_sum])
 
     results = {}
     total_stakes = 0
