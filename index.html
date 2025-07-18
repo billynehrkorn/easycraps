@@ -481,7 +481,7 @@
 
 <div class="controls">
     <button class="roll-btn" id="rollBtn" onclick="rollDice()">ROLL</button>
-    <button class="clear-btn" onclick="clearBets()">Clear Bets</button>
+    <button class="clear-btn" onclick="clearAllBets()">Clear Bets</button>
 </div>
 
 <div id="number-bets">
@@ -621,6 +621,16 @@
         100: '#333'
     };
 
+    // Global variable for player's actual total balance (cash + staked)
+    let currentBalance = 500;
+
+    // Generate or retrieve session ID
+    let sessionId = localStorage.getItem('crapsSessionId');
+    if (!sessionId) {
+        sessionId = crypto.randomUUID(); // Generate a unique ID
+        localStorage.setItem('crapsSessionId', sessionId);
+    }
+
     function getChipStyle(value) {
         let bgColor = '#1a704a'; // Default background for custom sums (a slightly lighter green)
         let textColor = 'white';
@@ -632,9 +642,7 @@
         return { bgColor, textColor };
     }
 
-    // Renamed parameter to fullBetInputId for clarity
     function renderBetChip(fullBetInputId, amount) {
-        // Extract the "clean" part (e.g., "2", "field", "seven")
         const cleanBetId = fullBetInputId.replace('bet-', '');
         const displayContainer = document.getElementById(`bet-display-${cleanBetId}`);
         if (!displayContainer) {
@@ -656,10 +664,9 @@
         chipDiv.style.backgroundColor = bgColor;
         chipDiv.style.color = textColor;
 
-        // Make this dynamically created chip draggable for removal
         chipDiv.draggable = true;
         chipDiv.dataset.betId = fullBetInputId; // Store the full ID for dragging off
-        chipDiv.dataset.value = amount; // Store the value it represents
+        chipDiv.dataset.value = amount; // Store the total value it represents for removal
 
         // Apply styles for positioning within bet-display
         chipDiv.style.position = 'absolute';
@@ -672,7 +679,6 @@
         chipDiv.style.borderWidth = '2px';
         chipDiv.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.4)';
 
-        // Add dragstart listener for chips on the table
         chipDiv.addEventListener('dragstart', (e) => {
             e.stopPropagation(); // Prevent parent dragstart if any
             e.dataTransfer.setData('text/plain', JSON.stringify({
@@ -690,24 +696,30 @@
         displayContainer.appendChild(chipDiv);
     }
 
-    function updateTotalBetDisplay() {
-        let totalBet = 0;
+    function calculateTotalStakedChips() {
+        let totalStaked = 0;
         betInputIds.forEach(betId => {
-            const value = parseFloat(document.getElementById(betId).value) || 0;
-            totalBet += value;
+            totalStaked += parseFloat(document.getElementById(betId).value) || 0;
         });
-        document.getElementById('total-bet').textContent = totalBet.toFixed(2);
+        return totalStaked;
     }
 
-    function clearBets() {
+    function updateTotalBetAndPlayableDisplay() {
+        const totalBet = calculateTotalStakedChips();
+        document.getElementById('total-bet').textContent = totalBet.toFixed(2);
+        // Playable balance is total money minus money currently staked
+        document.getElementById('playable-balance').textContent = (currentBalance - totalBet).toFixed(2);
+    }
+
+    function clearAllBets() { // Function for the "Clear Bets" button
         betInputIds.forEach(betId => {
             const inputElement = document.getElementById(betId);
             if (inputElement) {
-                inputElement.value = '0';
+                inputElement.value = '0'; // Clear the bet amount
                 renderBetChip(betId, 0); // Clear visual chip
             }
         });
-        updateTotalBetDisplay(); // Update total bet display after clearing
+        updateTotalBetAndPlayableDisplay(); // Update displays after clearing all bets
     }
 
     async function rollDice() {
@@ -731,33 +743,46 @@
         }
 
         try {
-            const response = await fetch('http://localhost:5000/roll', {
+            const response = await fetch('/roll', { // Use relative URL
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ bets })
+                body: JSON.stringify({ bets, sessionId }) // Include sessionId
             });
 
             const result = await response.json();
 
             document.getElementById('dice1').textContent = result.dice[0];
             document.getElementById('dice2').textContent = result.dice[1];
-            // document.getElementById('diceResult').style.display = 'block'; // Dice are always visible now
 
-            document.getElementById('playable-balance').textContent = result.newBalance.toFixed(2);
+            currentBalance = result.newBalance; // Update global currentBalance from backend response
+
             document.getElementById('last-bet').textContent = result.totalStakesThisRound.toFixed(2);
             document.getElementById('last-win').textContent = result.netChangeThisRound.toFixed(2);
 
-
             displayNotifications(result.results);
 
-            // After roll, clear all bets and re-render chips (they will be 0)
-            clearBets(); // This will also update total bet display
+            // Conditional chip clearing based on roll results
+            Object.entries(result.results).forEach(([betType, betResult]) => {
+                const fullBetInputId = `bet-${betType}`;
+                const hiddenInput = document.getElementById(fullBetInputId);
+
+                if (hiddenInput) {
+                    if (!betResult.win && !betResult.push) { // If it's a loss
+                        hiddenInput.value = '0'; // Clear the bet amount
+                        renderBetChip(fullBetInputId, 0); // Clear the visual chip
+                    }
+                    // If it's a win or push, the chip remains on the table with its value
+                    // The backend has already handled the payout/return of stake to newBalance
+                }
+            });
+
+            updateTotalBetAndPlayableDisplay(); // Recalculate based on remaining chips and new balance
 
         } catch (error) {
             console.error('Error:', error);
-            alert('Error connecting to server. Make sure the Python backend is running on port 5000.');
+            alert('Error connecting to server. Make sure the Python backend is running.');
         }
 
         rollBtn.disabled = false;
@@ -809,14 +834,16 @@
 
     async function loadGameStats() {
         try {
-            const response = await fetch('http://localhost:5000/game_stats');
+            const response = await fetch(`/game_stats?sessionId=${sessionId}`); // Use relative URL with sessionId
             const data = await response.json();
-            document.getElementById('playable-balance').textContent = data.balance.toFixed(2);
+            currentBalance = data.balance; // Initialize currentBalance from backend
             document.getElementById('last-bet').textContent = data.lastBetTotal.toFixed(2);
             document.getElementById('last-win').textContent = data.lastWinAmount.toFixed(2);
-            updateTotalBetDisplay(); // Initialize total bet display
+            updateTotalBetAndPlayableDisplay(); // Initialize total bet and playable display
         } catch (error) {
-            console.log('Could not load game stats from server');
+            console.log('Could not load game stats from server, initializing with default balance.');
+            currentBalance = 500; // Fallback if backend is not reachable or session is new
+            updateTotalBetAndPlayableDisplay();
         }
     }
 
@@ -859,13 +886,12 @@
             }
 
             let currentBet = parseFloat(hiddenInput.value) || 0;
-            let currentPlayableBalance = parseFloat(document.getElementById('playable-balance').textContent) || 0; // Use playable-balance
 
-            if (currentPlayableBalance >= chipValue) {
+            // Check if there's enough playable balance for the new chip
+            if (currentBalance - calculateTotalStakedChips() >= chipValue) {
                 hiddenInput.value = (currentBet + chipValue).toFixed(0); // Update hidden input
-                document.getElementById('playable-balance').textContent = (currentPlayableBalance - chipValue).toFixed(2); // Deduct from client balance
                 renderBetChip(fullBetInputId, parseFloat(hiddenInput.value)); // Render visual chip
-                updateTotalBetDisplay(); // Update total bet display
+                updateTotalBetAndPlayableDisplay(); // Update total bet and playable display
             } else {
                 alert('Not enough balance to place this bet!');
             }
@@ -900,22 +926,21 @@
 
         try {
             const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-            const fullBetInputId = data.betId; // This is the full ID like "bet-2"
-            const valueToRemove = data.value;
+            const fullBetInputId = data.betId;
+            const valueToRemove = data.value; // This is the TOTAL amount on the bet spot when the chip was dragged
 
             if (fullBetInputId && valueToRemove) {
                 const hiddenInput = document.getElementById(fullBetInputId);
                 if (hiddenInput) {
                     let currentBet = parseFloat(hiddenInput.value) || 0;
-                    let currentPlayableBalance = parseFloat(document.getElementById('playable-balance').textContent) || 0;
 
-                    // Ensure we don't go below zero for the bet
-                    const newBetAmount = Math.max(0, currentBet - valueToRemove);
+                    const newBetAmount = Math.max(0, currentBet - valueToRemove); // Reduce the bet on that spot
                     hiddenInput.value = newBetAmount.toFixed(0);
 
-                    document.getElementById('playable-balance').textContent = (currentPlayableBalance + valueToRemove).toFixed(2); // Add back to balance
+                    // currentBalance should NOT be modified here. It represents total money.
+                    // The playable balance will correctly increase because totalBet decreases.
                     renderBetChip(fullBetInputId, newBetAmount); // Update visual chip (will disappear if 0)
-                    updateTotalBetDisplay(); // Update total bet display
+                    updateTotalBetAndPlayableDisplay(); // Update total bet and playable display
                 }
             }
         } catch (error) {

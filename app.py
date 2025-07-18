@@ -6,10 +6,9 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Global balance tracking (in a real app, you'd use a database)
-player_balance = 500
-last_bet_total = 0  # Global to track total bet of last round
-last_win_amount = 0 # Global to track net win/loss of last round
+# In-memory store for session balances and last game stats
+# In a real application, this would be persisted in a database
+session_data = {}  # {session_id: {'balance': 500, 'lastBetTotal': 0, 'lastWinAmount': 0}}
 
 
 @app.route('/')
@@ -19,10 +18,16 @@ def index():
 
 @app.route('/roll', methods=['POST'])
 def roll_dice():
-    global player_balance, last_bet_total, last_win_amount
-
     data = request.json
+    session_id = data.get('sessionId')
     bets = data.get('bets', {})
+
+    # Initialize session data if it doesn't exist
+    if session_id not in session_data:
+        session_data[session_id] = {'balance': 500, 'lastBetTotal': 0, 'lastWinAmount': 0}
+
+    current_session = session_data[session_id]
+    player_balance = current_session['balance']
 
     # Generate two dice
     d1 = random.randint(1, 6)
@@ -146,32 +151,33 @@ def roll_dice():
     # Calculate net change and update balance
     net_change = total_payouts - total_stakes
     player_balance += net_change
+    current_session['balance'] = player_balance  # Update session balance
 
-    # Update global last roll stats
-    last_bet_total = total_stakes
-    last_win_amount = net_change
+    # Update session last roll stats
+    current_session['lastBetTotal'] = total_stakes
+    current_session['lastWinAmount'] = net_change
 
     return jsonify({
         'dice': [d1, d2],
         'sum': dice_sum,
         'results': results,
-        'newBalance': player_balance,
+        'newBalance': player_balance,  # Send back the updated balance
         'totalStakesThisRound': total_stakes,
         'netChangeThisRound': net_change
     })
 
 
-@app.route('/balance')
-def get_balance():
-    return jsonify({'balance': player_balance})
-
-@app.route('/game_stats') # New endpoint to get all game stats
+@app.route('/game_stats', methods=['GET'])
 def get_game_stats():
-    global player_balance, last_bet_total, last_win_amount
+    session_id = request.args.get('sessionId')  # Get session ID from query parameter
+    if session_id not in session_data:
+        session_data[session_id] = {'balance': 500, 'lastBetTotal': 0, 'lastWinAmount': 0}
+
+    current_session = session_data[session_id]
     return jsonify({
-        'balance': player_balance,
-        'lastBetTotal': last_bet_total,
-        'lastWinAmount': last_win_amount
+        'balance': current_session['balance'],
+        'lastBetTotal': current_session['lastBetTotal'],
+        'lastWinAmount': current_session['lastWinAmount']
     })
 
 
